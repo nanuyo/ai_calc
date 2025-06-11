@@ -1,0 +1,107 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
+  font-family: Arial, sans-serif;
+}
+
+.calculator {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+}
+
+.display {
+  padding: 10px;
+  background-color: #222;
+  border-bottom: 1px solid #ccc;
+}
+
+.display input {
+  width: 100%;
+  padding: 10px;
+  font-size: 2em;
+  text-align: right;
+  border: none;
+  background-color: #222;
+  color: white;
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px; /* Creates the button borders */
+  background-color: #ccc; /* This will be the color of the gaps */
+}
+
+.buttons button {
+  padding: 20px;
+  font-size: 1.5em;
+  border: none;
+  background-color: #e0e0e0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.buttons button:hover {
+  background-color: #d0d0d0;
+}
+
+.buttons button:active {
+  background-color: #c0c0c0;
+}
+
+/* Make the equals button span two columns */
+.buttons button:nth-child(16) { /* Assuming '=' is the 16th button */
+  grid-column: span 2;
+  background-color: #ff9500;
+  color: white;
+}
+.buttons button:nth-child(16):hover {
+  background-color: #e08500;
+}
+.buttons button:nth-child(16):active {
+  background-color: #d07500;
+}
+
+/* Style operator buttons */
+.buttons button:nth-child(2), /* / */
+.buttons button:nth-child(3), /* * */
+.buttons button:nth-child(4), /* DEL */
+.buttons button:nth-child(8), /* - */
+.buttons button:nth-child(12) /* + */ {
+  background-color: #f0ad4e;
+  color: white;
+}
+.buttons button:nth-child(2):hover,
+.buttons button:nth-child(3):hover,
+.buttons button:nth-child(4):hover,
+.buttons button:nth-child(8):hover,
+.buttons button:nth-child(12):hover {
+  background-color: #ec9c3d;
+}
+.buttons button:nth-child(2):active,
+.buttons button:nth-child(3):active,
+.buttons button:nth-child(4):active,
+.buttons button:nth-child(8):active,
+.buttons button:nth-child(12):active {
+  background-color: #db8b2c;
+}
+
+
+/* Style AC button */
+.buttons button:nth-child(1) {
+  background-color: #d9534f;
+  color: white;
+}
+.buttons button:nth-child(1):hover {
+  background-color: #c9423f;
+}
+.buttons button:nth-child(1):active {
+  background-color: #b9312f;
+}
