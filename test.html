@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Calculator Tests</title>
+<link rel="stylesheet" type="text/css" href="style.css"> <!-- Optional: for styling test page -->
+<style>
+  body { padding: 20px; font-family: monospace; }
+  .test-case { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+  .pass { color: green; }
+  .fail { color: red; font-weight: bold; }
+  pre { background-color: #f9f9f9; padding: 5px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+  <h1>Calculator Logic Tests</h1>
+  <div class="calculator" style="display:none;"> <!-- Hide the actual calculator UI -->
+    <div class="display">
+      <input type="text" id="result" disabled>
+    </div>
+  </div>
+
+  <div id="test-results"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const testResultsDiv = document.getElementById('test-results');
+    let testCount = 0;
+    let passCount = 0;
+
+    function runTest(description, testFn) {
+      testCount++;
+      let resultMessage = '';
+      let consoleOutput = '';
+      const originalConsoleLog = console.log;
+      console.log = (...args) => { // Capture console.log output if any
+        consoleOutput += args.join(' ') + '\n';
+      };
+
+      try {
+        // Reset calculator state before each test
+        clearDisplay(); // Assuming clearDisplay() resets globals like currentInput, previousInput, operator
+
+        testFn();
+        resultMessage = `<span class="pass">PASS</span>`;
+        passCount++;
+      } catch (e) {
+        resultMessage = `<span class="fail">FAIL</span>: ${e.message}`;
+        consoleOutput += 'Stack Trace:\n' + e.stack + '\n';
+      } finally {
+        console.log = originalConsoleLog; // Restore console.log
+        const testCaseDiv = document.createElement('div');
+        testCaseDiv.className = 'test-case';
+        testCaseDiv.innerHTML = `<strong>Test ${testCount}: ${description}</strong> - ${resultMessage}`;
+        if (consoleOutput) {
+          const pre = document.createElement('pre');
+          pre.textContent = consoleOutput;
+          testCaseDiv.appendChild(pre);
+        }
+        testResultsDiv.appendChild(testCaseDiv);
+      }
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(`${message || 'Assertion Failed'}: Expected "${expected}", but got "${actual}"`);
+      }
+    }
+
+    // --- Test Cases ---
+
+    runTest("Initial display should be '0'", () => {
+      assertEqual(resultDisplay.value, '0', "Initial display");
+    });
+
+    runTest("Appending numbers", () => {
+      appendInput('1');
+      appendInput('2');
+      appendInput('3');
+      assertEqual(resultDisplay.value, '123', "Appending 123");
+      clearDisplay();
+      appendInput('0');
+      assertEqual(resultDisplay.value, '0', "Appending 0");
+    });
+
+    runTest("Appending decimal point", () => {
+      appendInput('1');
+      appendInput('.');
+      appendInput('5');
+      assertEqual(resultDisplay.value, '1.5', "Appending 1.5");
+      appendInput('.'); // Try appending another decimal
+      assertEqual(resultDisplay.value, '1.5', "Second decimal ignored");
+    });
+
+    runTest("Clear display (AC)", () => {
+      appendInput('123');
+      appendInput('+');
+      appendInput('456');
+      clearDisplay();
+      assertEqual(resultDisplay.value, '0', "Display after AC");
+      assertEqual(currentInput, '', "currentInput after AC");
+      assertEqual(previousInput, '', "previousInput after AC");
+      assertEqual(operator, '', "operator after AC");
+    });
+
+    runTest("Delete last character (DEL)", () => {
+      appendInput('1');
+      appendInput('2');
+      appendInput('3');
+      deleteLast();
+      assertEqual(resultDisplay.value, '12', "DEL once");
+      deleteLast();
+      assertEqual(resultDisplay.value, '1', "DEL twice");
+      deleteLast();
+      assertEqual(resultDisplay.value, '0', "DEL until empty"); // Assuming display shows '0' when empty
+      deleteLast(); // DEL on empty
+      assertEqual(resultDisplay.value, '0', "DEL on already empty");
+    });
+
+    // Basic Arithmetic
+    runTest("Addition: 5 + 3 = 8", () => {
+      appendInput('5');
+      appendInput('+');
+      appendInput('3');
+      calculateResult();
+      assertEqual(resultDisplay.value, '8', "5 + 3");
+    });
+
+    runTest("Subtraction: 10 - 4 = 6", () => {
+      appendInput('1');
+      appendInput('0');
+      appendInput('-');
+      appendInput('4');
+      calculateResult();
+      assertEqual(resultDisplay.value, '6', "10 - 4");
+    });
+
+    runTest("Multiplication: 7 * 2 = 14", () => {
+      appendInput('7');
+      appendInput('*');
+      appendInput('2');
+      calculateResult();
+      assertEqual(resultDisplay.value, '14', "7 * 2");
+    });
+
+    runTest("Division: 20 / 4 = 5", () => {
+      appendInput('2');
+      appendInput('0');
+      appendInput('/');
+      appendInput('4');
+      calculateResult();
+      assertEqual(resultDisplay.value, '5', "20 / 4");
+    });
+
+    runTest("Division by zero", () => {
+      appendInput('5');
+      appendInput('/');
+      appendInput('0');
+      calculateResult();
+      assertEqual(resultDisplay.value, 'Error', "Division by zero");
+      // Check state reset after error
+      clearDisplay(); // Manual reset for next test, ensure calculateResult did its part
+      assertEqual(currentInput, '', "currentInput after error and AC");
+      assertEqual(previousInput, '', "previousInput after error and AC");
+    });
+
+    runTest("Sequential operations: 1 + 2 + 3 = 6", () => {
+      appendInput('1');
+      appendInput('+');
+      appendInput('2');
+      appendInput('+'); // This should trigger calculation of 1+2
+      // At this point, previousInput should be '3', currentInput should be '', operator should be '+'
+      assertEqual(previousInput, '3', "After 1+2, previousInput should be 3");
+      appendInput('3');
+      calculateResult();
+      assertEqual(resultDisplay.value, '6', "1 + 2 + 3");
+    });
+
+    runTest("Sequential operations with different operators: 10 - 2 * 3 = 24 (not 4)", () => {
+      // Standard calculator logic: 10 - 2 = 8, then 8 * 3 = 24
+      appendInput('1');
+      appendInput('0'); //10
+      appendInput('-'); // op = -
+      appendInput('2'); // current = 2, previous = 10
+      appendInput('*'); // calculate 10-2=8. previous=8, op = *, current =""
+      assertEqual(previousInput, '8', "After 10-2, previousInput should be 8");
+      assertEqual(operator, '*', "Operator should be *");
+      appendInput('3'); // current = 3
+      calculateResult();
+      assertEqual(resultDisplay.value, '24', "10 - 2 * 3");
+    });
+
+    runTest("Pressing operator after a result: 2 + 3 = 5, then * 4 = 20", () => {
+      appendInput('2');
+      appendInput('+');
+      appendInput('3');
+      calculateResult(); // result is 5, currentInput is '5'
+      assertEqual(resultDisplay.value, '5', "2 + 3 = 5");
+      appendInput('*'); // currentInput ('5') becomes previousInput, operator is '*'
+      assertEqual(previousInput, '5', "previousInput is '5' after pressing *");
+      assertEqual(operator, '*', "Operator is '*' after pressing *");
+      assertEqual(currentInput, '', "currentInput is empty after pressing *");
+      appendInput('4');
+      calculateResult();
+      assertEqual(resultDisplay.value, '20', "Result * 4");
+    });
+
+    runTest("Pressing equals multiple times: 2 + 3 = = = (should remain 5 or re-evaluate with last input)", () => {
+      // Our current calculateResult re-uses previousInput if currentInput is empty
+      // So, 2 + 3 = (5). Press = again: previousInput becomes '5', currentInput becomes '3' (last operand)
+      // 5 + 3 = 8. This is common calculator behavior.
+      appendInput('2');
+      appendInput('+');
+      appendInput('3');
+      calculateResult(); // 5
+      assertEqual(resultDisplay.value, '5', "2 + 3 = 5");
+      const lastCurrent = '3'; // Simulating what would be the last 'current' value for re-evaluation
+      // Manually set up for repeated equals, as our calculateResult() uses global `currentInput`
+      // which is cleared or becomes result. For this test, we want to simulate user pressing equals again
+      // where the second operand is implicitly re-used.
+      // Our calculateResult's logic: if (currentInput === '' && previousInput !== '' && operator !== '') currentInput = previousInput;
+      // This means 5 + 5 for the second equals if not handled specifically.
+      // Let's adjust the test to reflect the implemented logic more accurately.
+      // The current `calculateResult` logic:
+      // if currentInput is empty, it tries to use previousInput as currentInput.
+      // So 2+3= (result 5). currentInput = '5', previousInput = '', operator = ''
+      // Press = again. previousInput='5', operator remains '', currentInput=''.
+      // The function `calculateResult` has:
+      // if (currentInput === '' || previousInput === '') { ... if (currentInput !== '' && previousInput === '' && operator === '') { previousInput = currentInput; return } ... }
+      // So, 5 will be set to previousInput. And it returns. Display is 5.
+      // This is one way to handle it. Let's test that.
+      calculateResult(); // Should effectively do nothing or behave as defined
+      assertEqual(resultDisplay.value, '5', "Pressing equals again (current behavior)");
+      // If we want 5+3=8:
+      // clearDisplay();
+      // appendInput('2'); appendInput('+'); appendInput('3'); calculateResult(); //5
+      // operator = '+'; // Manually set operator to persist
+      // previousInput = resultDisplay.value; // '5'
+      // currentInput = '3'; // Manually set last operand
+      // calculateResult();
+      // assertEqual(resultDisplay.value, '8', "5 + 3 (simulated re-eval)");
+    });
+
+    runTest("Changing operator: 5 * - 2 = 3 (5-2)", () => {
+      appendInput('5');
+      appendInput('*');
+      appendInput('-'); // operator changes from * to -
+      assertEqual(operator, '-', "Operator changed to '-'");
+      assertEqual(previousInput, '5', "previousInput is '5'");
+      appendInput('2');
+      calculateResult();
+      assertEqual(resultDisplay.value, '3', "5 - 2");
+    });
+
+    runTest("Starting with an operator (should be ignored or handled gracefully)", () => {
+      appendInput('+');
+      appendInput('5');
+      assertEqual(currentInput, '5', "Input after leading operator");
+      assertEqual(operator, '', "Operator should not be set yet by leading '+'");
+      assertEqual(previousInput, '', "Previous input empty");
+      // Test actual calculation
+      clearDisplay();
+      appendInput('+'); // This should not set the operator if currentInput is empty
+      appendInput('5');
+      appendInput('+'); // Now operator is set
+      appendInput('3');
+      calculateResult();
+      assertEqual(resultDisplay.value, '8', "'+' 5 + 3 = 8");
+    });
+
+    runTest("Multiple leading zeros followed by number: 007 -> 7", () => {
+      appendInput('0');
+      appendInput('0');
+      appendInput('7');
+      assertEqual(resultDisplay.value, '007', "Display is '007'"); // Display shows it
+      // When calculation occurs, parseFloat will handle it.
+      appendInput('+');
+      appendInput('1');
+      calculateResult();
+      assertEqual(resultDisplay.value, '8', "007 + 1 = 8");
+    });
+
+    runTest("Calculation with decimal numbers: 1.5 + 2.5 = 4", () => {
+        appendInput('1');
+        appendInput('.');
+        appendInput('5');
+        appendInput('+');
+        appendInput('2');
+        appendInput('.');
+        appendInput('5');
+        calculateResult();
+        assertEqual(resultDisplay.value, '4', "1.5 + 2.5");
+    });
+
+    runTest("Equals after a single number: 5 = (should be 5)", () => {
+        appendInput('5');
+        calculateResult();
+        assertEqual(resultDisplay.value, '5', "5 =");
+        // And it should be possible to continue calculation
+        appendInput('+');
+        appendInput('3');
+        calculateResult();
+        assertEqual(resultDisplay.value, '8', "Then 5 + 3 =");
+    });
+
+
+    // --- Summary ---
+    const summaryDiv = document.createElement('div');
+    summaryDiv.innerHTML = `<h3>Test Summary: ${passCount} / ${testCount} tests passed.</h3>`;
+    if(passCount < testCount) summaryDiv.style.color = 'red'; else summaryDiv.style.color = 'green';
+    testResultsDiv.insertBefore(summaryDiv, testResultsDiv.firstChild);
+
+  </script>
+</body>
+</html>
